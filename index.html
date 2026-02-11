@@ -642,15 +642,18 @@ function updatePlayer(){
       }
     }
   }
-  // Underground exit pipe check
+  // Underground exit pipe check — find the exit pipe and check player overlap with full 2-tile width
   if (underground && !pipeTransition.active && keys['ArrowDown'] && player.onGround) {
+    let exitPipeX = -1, exitPipeY = -1;
     for (const b of undergroundBlocks) {
-      if (b.warpExit && (b.type === 'pipe_top_l' || b.type === 'pipe_top_r')) {
-        if (player.x + player.w > b.x && player.x < b.x + b.w && Math.abs((player.y + player.h) - b.y) < 4 * SCALE) {
-          startPipeTransition('up');
-          player.vx = 0;
-          return;
-        }
+      if (b.warpExit && b.type === 'pipe_top_l') { exitPipeX = b.x; exitPipeY = b.y; break; }
+    }
+    if (exitPipeX >= 0) {
+      const pipeW = T * 2; // full pipe is 2 tiles wide
+      if (player.x + player.w > exitPipeX && player.x < exitPipeX + pipeW && Math.abs((player.y + player.h) - exitPipeY) < 8 * SCALE) {
+        startPipeTransition('up');
+        player.vx = 0;
+        return;
       }
     }
   }
@@ -868,7 +871,7 @@ function drawBlock(b){
       ctx.fillStyle='#3a3a4a';ctx.fillRect(sx,sy,T,T);ctx.fillStyle='#4a4a5a';ctx.fillRect(sx,sy,T,4*SCALE);ctx.fillRect(sx,sy,4*SCALE,T);
       ctx.fillStyle='#5a5a6a';ctx.beginPath();ctx.arc(sx+4*SCALE,sy+4*SCALE,2*SCALE,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#2a2a3a';ctx.fillRect(sx+T-2*SCALE,sy,2*SCALE,T);
-      if(b.warp){
+      if(b.warp||b.warpExit){
         const glow=0.4+Math.sin(frameCount*0.06)*0.2;
         ctx.fillStyle=`rgba(255,140,0,${glow})`;ctx.beginPath();ctx.arc(sx+T*0.6,sy+T*0.5,4*SCALE,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#ff8800';ctx.fillRect(sx+T*0.4,sy+T*0.3,5*SCALE,5*SCALE);
@@ -879,7 +882,7 @@ function drawBlock(b){
     case 'pipe_top_r':
       ctx.fillStyle='#3a3a4a';ctx.fillRect(sx,sy,T,T);ctx.fillStyle='#4a4a5a';ctx.fillRect(sx,sy,T,4*SCALE);
       ctx.fillStyle='#2a2a3a';ctx.fillRect(sx+T-2*SCALE,sy,2*SCALE,T);
-      if(b.warp){
+      if(b.warp||b.warpExit){
         const glow2=0.3+Math.sin(frameCount*0.06)*0.15;
         ctx.fillStyle=`rgba(255,100,0,${glow2})`;ctx.beginPath();ctx.arc(sx+T*0.4,sy+T*0.5,3*SCALE,0,Math.PI*2);ctx.fill();
       }
@@ -1648,9 +1651,10 @@ function draw(){
     drawParticles();
     drawZero();
     drawJack();
-    // "DOWN on pipe to exit" hint near exit pipe
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${4*SCALE}px monospace`;ctx.textAlign='center';
-    ctx.fillText('\u2193 EXIT',18.5*T-cameraX,8*T);
+    // "DOWN on pipe to exit" hint near exit pipe — blinking for visibility
+    const hintAlpha = 0.4 + Math.sin(frameCount * 0.08) * 0.3;
+    ctx.fillStyle=`rgba(255,200,100,${hintAlpha})`;ctx.font=`bold ${5*SCALE}px monospace`;ctx.textAlign='center';
+    ctx.fillText('\u2193 DOWN TO EXIT',18.5*T-cameraX,8*T);
   } else {
     drawBackground();
     for(const b of blocks) drawBlock(b);
